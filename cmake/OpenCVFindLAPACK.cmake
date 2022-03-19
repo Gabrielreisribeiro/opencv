@@ -20,25 +20,17 @@ macro(_find_header_file_in_dirs VAR NAME)
   endif()
 endmacro()
 
-macro(ocv_lapack_check)
-  string(REGEX REPLACE "[^a-zA-Z0-9_]" "_" _lapack_impl "${LAPACK_IMPL}")
-  message(STATUS "LAPACK(${LAPACK_IMPL}): LAPACK_LIBRARIES: ${LAPACK_LIBRARIES}")
-  _find_header_file_in_dirs(OPENCV_CBLAS_H_PATH_${_lapack_impl} "${LAPACK_CBLAS_H}" "${LAPACK_INCLUDE_DIR}")
-  _find_header_file_in_dirs(OPENCV_LAPACKE_H_PATH_${_lapack_impl} "${LAPACK_LAPACKE_H}" "${LAPACK_INCLUDE_DIR}")
-  if(NOT OPENCV_CBLAS_H_PATH_${_lapack_impl} OR NOT OPENCV_LAPACKE_H_PATH_${_lapack_impl})
-    message(WARNING "LAPACK(${LAPACK_IMPL}): CBLAS/LAPACK headers are not found in '${LAPACK_INCLUDE_DIR}'")
-    unset(LAPACK_LIBRARIES)
-  else()
-    # adding proxy opencv_lapack.h header
-    set(CBLAS_H_PROXY_PATH ${CMAKE_BINARY_DIR}/opencv_lapack.h)
+macro(ocv_lapack_make_hdr _cblas_hdr _lapacke_hdr)
+  # adding proxy opencv_lapack.h header
+  set(CBLAS_H_PROXY_PATH ${CMAKE_BINARY_DIR}/opencv_lapack.h)
 
-    set(_lapack_add_extern_c NOT (APPLE OR OPENCV_SKIP_LAPACK_EXTERN_C) OR OPENCV_FORCE_LAPACK_EXTERN_C)
+  set(_lapack_add_extern_c NOT (APPLE OR OPENCV_SKIP_LAPACK_EXTERN_C) OR OPENCV_FORCE_LAPACK_EXTERN_C)
 
-    set(_lapack_content "// This file is auto-generated\n")
-    if(${_lapack_add_extern_c})
-      list(APPEND _lapack_content "extern \"C\" {")
-    endif()
-    if(NOT OPENCV_SKIP_LAPACK_MSVC_FIX)
+  set(_lapack_content "// This file is auto-generated\n")
+  if(${_lapack_add_extern_c})
+     list(APPEND _lapack_content "extern \"C\" {")
+  endif()
+  if(NOT OPENCV_SKIP_LAPACK_MSVC_FIX)
       list(APPEND _lapack_content "
 #ifdef _MSC_VER
 #include <complex.h>
@@ -46,12 +38,12 @@ macro(ocv_lapack_check)
 #define lapack_complex_double _Dcomplex
 #endif
 ")
-    endif()
-    list(APPEND _lapack_content "#include \"${OPENCV_CBLAS_H_PATH_${_lapack_impl}}\"")
-    if(NOT "${OPENCV_CBLAS_H_PATH_${_lapack_impl}}" STREQUAL "${OPENCV_LAPACKE_H_PATH_${_lapack_impl}}")
-      list(APPEND _lapack_content "#include \"${OPENCV_LAPACKE_H_PATH_${_lapack_impl}}\"")
-    endif()
-    list(APPEND _lapack_content "
+  endif()
+  list(APPEND _lapack_content "#include \"${_cblas_hdr}\"")
+  if(NOT "${_cblas_hdr}" STREQUAL "${_lapacke_hdr}")
+    list(APPEND _lapack_content "#include \"${_lapacke_hdr}\"")
+  endif()
+  list(APPEND _lapack_content "
 #if defined(LAPACK_GLOBAL) || defined(LAPACK_NAME)
 /*
  * Using netlib's reference LAPACK implementation version >= 3.4.0 (first with C interface).
@@ -68,72 +60,89 @@ macro(ocv_lapack_check)
 #define OCV_LAPACK_FUNC(f) f##_
 #endif
 ")
-    if(${_lapack_add_extern_c})
-      list(APPEND _lapack_content "}")
+  if(${_lapack_add_extern_c})
+    list(APPEND _lapack_content "}")
+  endif()
+  string(REPLACE ";" "\n" _lapack_content "${_lapack_content}")
+  ocv_update_file("${CBLAS_H_PROXY_PATH}" "${_lapack_content}")
+endmacro()
+
+macro(ocv_lapack_run_check)
+  if(CMAKE_GENERATOR MATCHES "Visual Studio"  # MSBuild
+      AND LAPACK_IMPL STREQUAL "MKL"
+      AND ";${LAPACK_LIBRARIES};" MATCHES ";tbb;" AND TARGET tbb
+      AND DEFINED TBB_INTERFACE_VERSION AND NOT (TBB_INTERFACE_VERSION LESS 12000)  # oneTBB/oneAPI workaround
+  )
+    # workaround DEFAULTLIB:tbb12.lib issue
+    get_target_property(_tbb_lib tbb IMPORTED_LOCATION)
+    if(NOT _tbb_lib)
+      get_target_property(_tbb_lib tbb IMPORTED_LOCATION_RELEASE)
     endif()
-
-    string(REPLACE ";" "\n" _lapack_content "${_lapack_content}")
-    ocv_update_file("${CBLAS_H_PROXY_PATH}" "${_lapack_content}")
-
-    if(CMAKE_GENERATOR MATCHES "Visual Studio"  # MSBuild
-        AND LAPACK_IMPL STREQUAL "MKL"
-        AND ";${LAPACK_LIBRARIES};" MATCHES ";tbb;" AND TARGET tbb
-        AND DEFINED TBB_INTERFACE_VERSION AND NOT (TBB_INTERFACE_VERSION LESS 12000)  # oneTBB/oneAPI workaround
-    )
-      # workaround DEFAULTLIB:tbb12.lib issue
-      get_target_property(_tbb_lib tbb IMPORTED_LOCATION)
-      if(NOT _tbb_lib)
-        get_target_property(_tbb_lib tbb IMPORTED_LOCATION_RELEASE)
-      endif()
-      if(_tbb_lib AND NOT OPENCV_SKIP_WORKAROUND_MKL_LINK_DIRECTORIES_TBB)
-        # MSBuild drops content of 'LIB' environment variable,
-        # so pass TBB library directory through `link_directories()`
-        get_filename_component(_tbb_lib_dir "${_tbb_lib}" DIRECTORY)
-        message(STATUS "MKL: adding '${_tbb_lib_dir}' to link directories (workaround DEFAULTLIB issue)")
-        link_directories("${_tbb_lib_dir}")
-      elseif(NOT OPENCV_SKIP_WORKAROUND_MKL_DEFAULTLIB)
-        # We may have tbb.lib for 'tbb' target, but not 'tbb12.lib'
-        ocv_update(OPENCV_MKL_IGNORE_DEFAULTLIB_TBB "tbb12.lib")
-        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /NODEFAULTLIB:${OPENCV_MKL_IGNORE_DEFAULTLIB_TBB}")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:${OPENCV_MKL_IGNORE_DEFAULTLIB_TBB}")
-      endif()
+    if(_tbb_lib AND NOT OPENCV_SKIP_WORKAROUND_MKL_LINK_DIRECTORIES_TBB)
+      # MSBuild drops content of 'LIB' environment variable,
+      # so pass TBB library directory through `link_directories()`
+      get_filename_component(_tbb_lib_dir "${_tbb_lib}" DIRECTORY)
+      message(STATUS "MKL: adding '${_tbb_lib_dir}' to link directories (workaround DEFAULTLIB issue)")
+      link_directories("${_tbb_lib_dir}")
+    elseif(NOT OPENCV_SKIP_WORKAROUND_MKL_DEFAULTLIB)
+      # We may have tbb.lib for 'tbb' target, but not 'tbb12.lib'
+      ocv_update(OPENCV_MKL_IGNORE_DEFAULTLIB_TBB "tbb12.lib")
+      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /NODEFAULTLIB:${OPENCV_MKL_IGNORE_DEFAULTLIB_TBB}")
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:${OPENCV_MKL_IGNORE_DEFAULTLIB_TBB}")
     endif()
+  endif()
 
-    # TODO add cache for try_compile() inputs/results
+  # TODO add cache for try_compile() inputs/results
 
-    get_property(__link_directories DIRECTORY PROPERTY LINK_DIRECTORIES)
-    if(LAPACK_LINK_LIBRARIES)
-      list(APPEND __link_directories ${LAPACK_LINK_LIBRARIES})
-    endif()
+  get_property(__link_directories DIRECTORY PROPERTY LINK_DIRECTORIES)
+  if(LAPACK_LINK_LIBRARIES)
+    list(APPEND __link_directories ${LAPACK_LINK_LIBRARIES})
+  endif()
 
-    try_compile(__VALID_LAPACK
-        "${OpenCV_BINARY_DIR}"
-        "${OpenCV_SOURCE_DIR}/cmake/checks/lapack_check.cpp"
-        CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${LAPACK_INCLUDE_DIR}\;${CMAKE_BINARY_DIR}"
-                    "-DLINK_DIRECTORIES:STRING=${__link_directories}"
-        LINK_LIBRARIES ${LAPACK_LIBRARIES}
-        OUTPUT_VARIABLE TRY_OUT
-    )
-    if(NOT __VALID_LAPACK)
-      file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
-          "\nLAPACK(${LAPACK_IMPL}) check FAILED:\n"
-          "    LAPACK_INCLUDE_DIR: '${LAPACK_INCLUDE_DIR}'\n"
-          "    LAPACK_LIBRARIES: '${LAPACK_LIBRARIES}'\n"
-          "    LAPACK_LINK_LIBRARIES: '${__link_directories}'\n"
-          "    Output:\n${TRY_OUT}\n\n")
-      message(STATUS "LAPACK(${LAPACK_IMPL}): Can't build LAPACK check code. This LAPACK version is not supported.")
-      unset(LAPACK_LIBRARIES)
-    else()
-      message(STATUS "LAPACK(${LAPACK_IMPL}): Support is enabled.")
-      ocv_include_directories(${LAPACK_INCLUDE_DIR})
-      set(HAVE_LAPACK 1)
-    endif()
+  try_compile(__VALID_LAPACK
+      "${OpenCV_BINARY_DIR}"
+      "${OpenCV_SOURCE_DIR}/cmake/checks/lapack_check.cpp"
+      CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${LAPACK_INCLUDE_DIR}\;${CMAKE_BINARY_DIR}"
+                  "-DLINK_DIRECTORIES:STRING=${__link_directories}"
+      LINK_LIBRARIES ${LAPACK_LIBRARIES}
+      OUTPUT_VARIABLE TRY_OUT
+  )
+  if(NOT __VALID_LAPACK)
+    file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
+        "\nLAPACK(${LAPACK_IMPL}) check FAILED:\n"
+        "    LAPACK_INCLUDE_DIR: '${LAPACK_INCLUDE_DIR}'\n"
+        "    LAPACK_LIBRARIES: '${LAPACK_LIBRARIES}'\n"
+        "    LAPACK_LINK_LIBRARIES: '${__link_directories}'\n"
+        "    Output:\n${TRY_OUT}\n\n")
+    message(STATUS "LAPACK(${LAPACK_IMPL}): Can't build LAPACK check code. This LAPACK version is not supported.")
+    unset(LAPACK_LIBRARIES)
+  else()
+    message(STATUS "${LAPACK_IMPL}: Support is enabled.")
+    ocv_include_directories(${LAPACK_INCLUDE_DIR})
+    set(HAVE_LAPACK 1)
+  endif()
+endmacro()
+
+macro(ocv_lapack_check)
+  string(REGEX REPLACE "[^a-zA-Z0-9_]" "_" _lapack_impl "${LAPACK_IMPL}")
+  message(STATUS "${LAPACK_IMPL}: LAPACK_LIBRARIES=${LAPACK_LIBRARIES}")
+  _find_header_file_in_dirs(OPENCV_CBLAS_H_PATH_${_lapack_impl} "${LAPACK_CBLAS_H}" "${LAPACK_INCLUDE_DIR}")
+  _find_header_file_in_dirs(OPENCV_LAPACKE_H_PATH_${_lapack_impl} "${LAPACK_LAPACKE_H}" "${LAPACK_INCLUDE_DIR}")
+  message(STATUS "${LAPACK_IMPL}: Looking for CBLAS/LAPACK headers in '${LAPACK_INCLUDE_DIR}': '${OPENCV_CBLAS_H_PATH_${_lapack_impl}}', '${OPENCV_LAPACKE_H_PATH_${_lapack_impl}}'")
+  if(OPENCV_CBLAS_H_PATH_${_lapack_impl} AND OPENCV_LAPACKE_H_PATH_${_lapack_impl})
+     ocv_lapack_make_hdr(${OPENCV_CBLAS_H_PATH_${_lapack_impl}} ${OPENCV_LAPACKE_H_PATH_${_lapack_impl}})
+     ocv_lapack_run_check()
+  else()
+     unset(LAPACK_LIBRARIES)
   endif()
 endmacro()
 
 if(WITH_LAPACK)
+  unset(LAPACK_LIBRARIES)
+  unset(LAPACK_LIBRARIES CACHE)
+
   ocv_update(LAPACK_IMPL "Unknown")
-  if(NOT OPENCV_LAPACK_FIND_PACKAGE_ONLY)
+  if(NOT BUILD_CLAPACK AND NOT OPENCV_LAPACK_FIND_PACKAGE_ONLY)
     if(NOT LAPACK_LIBRARIES AND NOT OPENCV_LAPACK_DISABLE_MKL)
       include(cmake/OpenCVFindMKL.cmake)
       if(HAVE_MKL)
@@ -142,6 +151,7 @@ if(WITH_LAPACK)
         set(LAPACK_CBLAS_H      "mkl_cblas.h")
         set(LAPACK_LAPACKE_H    "mkl_lapack.h")
         set(LAPACK_IMPL         "MKL")
+        set(LAPACK_VERSION      "${MKL_VERSION_STR}")
         ocv_lapack_check()
       endif()
     endif()
@@ -169,7 +179,7 @@ if(WITH_LAPACK)
     endif()
   endif()
 
-  if(NOT LAPACK_LIBRARIES)
+  if(NOT BUILD_CLAPACK AND NOT LAPACK_LIBRARIES)
     if(WIN32 AND NOT OPENCV_LAPACK_SHARED_LIBS)
       set(BLA_STATIC 1)
     endif()
@@ -195,31 +205,45 @@ if(WITH_LAPACK)
           set(LAPACK_LAPACKE_H    "lapacke.h")
           set(LAPACK_IMPL         "LAPACK/Generic")
           ocv_lapack_check()
-        elseif(APPLE)
-          set(LAPACK_CBLAS_H      "Accelerate/Accelerate.h")
-          set(LAPACK_LAPACKE_H    "Accelerate/Accelerate.h")
-          set(LAPACK_IMPL         "LAPACK/Apple")
-          ocv_lapack_check()
         endif()
       endif()
     endif()
-    if(NOT HAVE_LAPACK)
+  endif()
+
+  if(NOT HAVE_LAPACK)
+    if(LAPACK_LIBRARIES AND LAPACK_CBLAS_H AND LAPACK_LAPACKE_H)
+      ocv_lapack_check()
+    else()
       unset(LAPACK_LIBRARIES)
       unset(LAPACK_LIBRARIES CACHE)
     endif()
   endif()
 
-  if(NOT LAPACK_LIBRARIES AND APPLE AND NOT OPENCV_LAPACK_FIND_PACKAGE_ONLY)
+  if(NOT BUILD_CLAPACK AND APPLE AND NOT LAPACK_LIBRARIES)
     set(LAPACK_INCLUDE_DIR  "")
     set(LAPACK_LIBRARIES    "-framework Accelerate")
     set(LAPACK_CBLAS_H      "Accelerate/Accelerate.h")
     set(LAPACK_LAPACKE_H    "Accelerate/Accelerate.h")
-    set(LAPACK_IMPL         "Apple")
+    set(LAPACK_IMPL         "LAPACK/Apple")
     ocv_lapack_check()
   endif()
 
-  if(NOT HAVE_LAPACK AND LAPACK_LIBRARIES AND LAPACK_CBLAS_H AND LAPACK_LAPACKE_H)
-    ocv_lapack_check()
+  if(BUILD_CLAPACK)
+    ocv_assert(NOT HAVE_LAPACK)
+  endif()
+  if(NOT HAVE_LAPACK)  # OR BUILD_CLAPACK=ON
+    add_subdirectory(3rdparty/clapack)
+
+    set(LAPACK_CBLAS_H  "cblas.h")
+    set(LAPACK_LAPACKE_H  "lapack.h")
+    set(LAPACK_IMPL  "LAPACK/clapack")
+    set(LAPACK_INCLUDE_DIR "${CLAPACK_INCLUDE_DIR}")
+    set(LAPACK_LIBRARIES ${CLAPACK_LIBRARIES})
+    set(LAPACK_VERSION "${CLAPACK_VERSION}")
+    ocv_lapack_make_hdr("${LAPACK_INCLUDE_DIR}/${LAPACK_CBLAS_H}" "${LAPACK_INCLUDE_DIR}/${LAPACK_LAPACKE_H}")
+    # unable to properly check against source code without binaries: ocv_lapack_check()
+    ocv_include_directories(${LAPACK_INCLUDE_DIR})
+    set(HAVE_LAPACK 1)
   endif()
 
   set(LAPACK_INCLUDE_DIR ${LAPACK_INCLUDE_DIR} CACHE PATH   "Path to BLAS include dir" FORCE)

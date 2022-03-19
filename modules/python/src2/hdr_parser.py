@@ -11,7 +11,9 @@ opencv_hdr_list = [
 "../../flann/include/opencv2/flann/miniflann.hpp",
 "../../ml/include/opencv2/ml.hpp",
 "../../imgproc/include/opencv2/imgproc.hpp",
-"../../calib3d/include/opencv2/calib3d.hpp",
+"../../3d/include/opencv2/3d.hpp",
+"../../stereo/include/opencv2/stereo.hpp",
+"../../calib/include/opencv2/calib.hpp",
 "../../features2d/include/opencv2/features2d.hpp",
 "../../video/include/opencv2/video/tracking.hpp",
 "../../video/include/opencv2/video/background_segm.hpp",
@@ -256,6 +258,10 @@ class CppHeaderParser(object):
         if "CV_EXPORTS_W_MAP" in l:
             l = l.replace("CV_EXPORTS_W_MAP", "")
             modlist.append("/Map")
+        if "CV_EXPORTS_W_PARAMS" in l:
+            l = l.replace("CV_EXPORTS_W_PARAMS", "")
+            modlist.append("/Map")
+            modlist.append("/Params")
         if "CV_EXPORTS_W_SIMPLE" in l:
             l = l.replace("CV_EXPORTS_W_SIMPLE", "")
             modlist.append("/Simple")
@@ -776,7 +782,12 @@ class CppHeaderParser(object):
                 var_list = [var_name1] + [i.strip() for i in var_list[1:]]
 
                 for v in var_list:
-                    class_decl[3].append([var_type, v, "", var_modlist])
+                    vv = v.split("=")
+                    vname = vv[0].strip()
+                    vdefval = ""
+                    if len(vv) > 1:
+                        vdefval = vv[1].strip()
+                    class_decl[3].append([var_type, vname, vdefval, var_modlist])
             return stmt_type, "", False, None
 
         # something unknown

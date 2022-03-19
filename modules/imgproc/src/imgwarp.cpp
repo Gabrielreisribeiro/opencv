@@ -3424,31 +3424,6 @@ cvWarpPerspective( const CvArr* srcarr, CvArr* dstarr, const CvMat* marr,
         fillval );
 }
 
-CV_IMPL void
-cvRemap( const CvArr* srcarr, CvArr* dstarr,
-         const CvArr* _mapx, const CvArr* _mapy,
-         int flags, CvScalar fillval )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr), dst0 = dst;
-    cv::Mat mapx = cv::cvarrToMat(_mapx), mapy = cv::cvarrToMat(_mapy);
-    CV_Assert( src.type() == dst.type() && dst.size() == mapx.size() );
-    cv::remap( src, dst, mapx, mapy, flags & cv::INTER_MAX,
-        (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT,
-        fillval );
-    CV_Assert( dst0.data == dst.data );
-}
-
-
-CV_IMPL CvMat*
-cv2DRotationMatrix( CvPoint2D32f center, double angle,
-                    double scale, CvMat* matrix )
-{
-    cv::Mat M0 = cv::cvarrToMat(matrix), M = cv::getRotationMatrix2D(center, angle, scale);
-    CV_Assert( M.size() == M0.size() );
-    M.convertTo(M0, M0.type());
-    return matrix;
-}
-
 
 CV_IMPL CvMat*
 cvGetPerspectiveTransform( const CvPoint2D32f* src,
@@ -3463,36 +3438,6 @@ cvGetPerspectiveTransform( const CvPoint2D32f* src,
 }
 
 
-CV_IMPL CvMat*
-cvGetAffineTransform( const CvPoint2D32f* src,
-                          const CvPoint2D32f* dst,
-                          CvMat* matrix )
-{
-    cv::Mat M0 = cv::cvarrToMat(matrix),
-        M = cv::getAffineTransform((const cv::Point2f*)src, (const cv::Point2f*)dst);
-    CV_Assert( M.size() == M0.size() );
-    M.convertTo(M0, M0.type());
-    return matrix;
-}
-
-
-CV_IMPL void
-cvConvertMaps( const CvArr* arr1, const CvArr* arr2, CvArr* dstarr1, CvArr* dstarr2 )
-{
-    cv::Mat map1 = cv::cvarrToMat(arr1), map2;
-    cv::Mat dstmap1 = cv::cvarrToMat(dstarr1), dstmap2;
-
-    if( arr2 )
-        map2 = cv::cvarrToMat(arr2);
-    if( dstarr2 )
-    {
-        dstmap2 = cv::cvarrToMat(dstarr2);
-        if( dstmap2.type() == CV_16SC1 )
-            dstmap2 = cv::Mat(dstmap2.size(), CV_16UC1, dstmap2.ptr(), dstmap2.step);
-    }
-
-    cv::convertMaps( map1, map2, dstmap1, dstmap2, dstmap1.type(), false );
-}
 
 /****************************************************************************************
 PkLab.net 2018 based on cv::linearPolar from OpenCV by J.L. Blanco, Apr 2009
@@ -3626,32 +3571,6 @@ void cv::logPolar( InputArray _src, OutputArray _dst,
     Size ssize = _src.size();
     double M = maxRadius > 0 ? std::exp(ssize.width / maxRadius) : 1;
     warpPolar(_src, _dst, ssize, center, M, flags | WARP_POLAR_LOG);
-}
-
-CV_IMPL
-void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
-                    CvPoint2D32f center, double maxRadius, int flags )
-{
-    Mat src = cvarrToMat(srcarr);
-    Mat dst = cvarrToMat(dstarr);
-
-    CV_Assert(src.size == dst.size);
-    CV_Assert(src.type() == dst.type());
-
-    cv::linearPolar(src, dst, center, maxRadius, flags);
-}
-
-CV_IMPL
-void cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
-                 CvPoint2D32f center, double M, int flags )
-{
-    Mat src = cvarrToMat(srcarr);
-    Mat dst = cvarrToMat(dstarr);
-
-    CV_Assert(src.size == dst.size);
-    CV_Assert(src.type() == dst.type());
-
-    cv::logPolar(src, dst, center, M, flags);
 }
 
 /* End of file. */

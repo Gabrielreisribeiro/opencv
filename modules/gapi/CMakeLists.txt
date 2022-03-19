@@ -29,7 +29,7 @@ ocv_add_module(gapi
     REQUIRED
       opencv_imgproc
     OPTIONAL
-      opencv_video opencv_calib3d
+      opencv_video opencv_stereo
     WRAP
       python
 )

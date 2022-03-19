@@ -168,7 +168,7 @@ void Core_PowTest::run_func()
             b = b.reshape(1);
             for( int i = 0; i < a.rows; i++ )
             {
-                b.at<float>(i,0) = (float)fabs(cvCbrt(a.at<float>(i,0)));
+                b.at<float>(i,0) = (float)fabs(cubeRoot(a.at<float>(i,0)));
                 for( int j = 1; j < a.cols; j++ )
                     b.at<float>(i,j) = (float)fabs(cv::cubeRoot(a.at<float>(i,j)));
             }
@@ -698,6 +698,11 @@ void Core_GEMMTest::get_minmax_bounds( int /*i*/, int /*j*/, int /*type*/, Scala
 
 void Core_GEMMTest::run_func()
 {
+    /*printf("tabc_flags=At:%d,Bt:%d,Ct:%d; A(%d x %d), B(%d x %d), C(%d x %d)\n",
+           (tabc_flag & GEMM_1_T) != 0, (tabc_flag & GEMM_2_T) != 0, (tabc_flag & GEMM_3_T) != 0,
+           test_mat[INPUT][0].rows, test_mat[INPUT][0].cols,
+           test_mat[INPUT][1].rows, test_mat[INPUT][1].cols,
+           test_mat[INPUT][4].rows, test_mat[INPUT][4].cols);*/
     cvGEMM( test_array[INPUT][0], test_array[INPUT][1], alpha,
            test_array[INPUT][4], beta, test_array[OUTPUT][0], tabc_flag );
 }

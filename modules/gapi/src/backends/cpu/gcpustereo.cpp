@@ -8,11 +8,11 @@
 #include <opencv2/gapi/cpu/stereo.hpp>
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 
-#ifdef HAVE_OPENCV_CALIB3D
-#include <opencv2/calib3d.hpp>
-#endif // HAVE_OPENCV_CALIB3D
+#ifdef HAVE_OPENCV_STEREO
+#include <opencv2/stereo.hpp>
+#endif // HAVE_OPENCV_STEREO
 
-#ifdef HAVE_OPENCV_CALIB3D
+#ifdef HAVE_OPENCV_STEREO
 
 /** @brief Structure for the Stereo operation setup parameters.*/
 struct GAPI_EXPORTS StereoSetup {
@@ -82,4 +82,4 @@ cv::GKernelPackage cv::gapi::calib3d::cpu::kernels()
     return GKernelPackage();
 }
 
-#endif // HAVE_OPENCV_CALIB3D
+#endif // HAVE_OPENCV_STEREO

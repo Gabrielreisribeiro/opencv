@@ -123,9 +123,9 @@ endif()
 set(STD_OPENCV_LIBS opencv-data)
 set(STD_OPENCV_DEV libopencv-dev)
 
-foreach(module calib3d core dnn features2d flann gapi highgui
+foreach(module 3d calib core dnn features2d flann gapi highgui
                imgcodecs imgproc ml objdetect
-               photo stitching ts video videoio)
+               photo stereo stitching ts video videoio)
   if(HAVE_opencv_${module})
     list(APPEND STD_OPENCV_LIBS "libopencv-${module}4.0")
     list(APPEND STD_OPENCV_DEV "libopencv-${module}-dev")
@@ -144,9 +144,9 @@ set(CPACK_COMPONENT_PYTHON_CONFLICTS python-opencv)
 set(CPACK_COMPONENT_PYTHON_PROVIDES python-opencv)
 set(CPACK_COMPONENT_PYTHON_REPLACES python-opencv)
 
-set(CPACK_COMPONENT_JAVA_CONFLICTS "libopencv4.0-java, libopencv4.0-jni")
-set(CPACK_COMPONENT_JAVA_PROVIDES "libopencv4.0-java, libopencv4.0-jni")
-set(CPACK_COMPONENT_JAVA_REPLACES "libopencv4.0-java, libopencv4.0-jni")
+set(CPACK_COMPONENT_JAVA_CONFLICTS "libopencv5.0-java, libopencv5.0-jni")
+set(CPACK_COMPONENT_JAVA_PROVIDES "libopencv5.0-java, libopencv5.0-jni")
+set(CPACK_COMPONENT_JAVA_REPLACES "libopencv5.0-java, libopencv5.0-jni")
 
 set(CPACK_COMPONENT_DOCS_CONFLICTS opencv-doc)
 set(CPACK_COMPONENT_SAMPLES_CONFLICTS opencv-doc)

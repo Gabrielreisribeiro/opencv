@@ -12,9 +12,9 @@
 #include <opencv2/gapi/cpu/stereo.hpp>
 #include "gapi_stereo_tests.hpp"
 
-#ifdef HAVE_OPENCV_CALIB3D
+#ifdef HAVE_OPENCV_STEREO
 
-#include <opencv2/calib3d.hpp>
+#include <opencv2/stereo.hpp>
 
 namespace opencv_test {
 
@@ -69,6 +69,6 @@ TEST_P(TestGAPIStereo, DisparityDepthTest)
 
 } // namespace opencv_test
 
-#endif // HAVE_OPENCV_CALIB3D
+#endif // HAVE_OPENCV_STEREO
 
 #endif // OPENCV_GAPI_STEREO_TESTS_INL_HPP

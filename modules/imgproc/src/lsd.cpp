@@ -180,7 +180,7 @@ public:
  * @param _density_th   Minimal density of aligned region points in rectangle.
  * @param _n_bins       Number of bins in pseudo-ordering of gradient modulus.
  */
-    LineSegmentDetectorImpl(int _refine = LSD_REFINE_STD, double _scale = 0.8,
+    LineSegmentDetectorImpl(LineSegmentDetectorModes _refine = LSD_REFINE_STD, double _scale = 0.8,
         double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5,
         double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024);
 
@@ -244,7 +244,7 @@ private:
     bool n_needed;
 
     const double SCALE;
-    const int doRefine;
+    const LineSegmentDetectorModes doRefine;
     const double SIGMA_SCALE;
     const double QUANT;
     const double ANG_TH;
@@ -392,7 +392,7 @@ public:
 /////////////////////////////////////////////////////////////////////////////////////////
 
 CV_EXPORTS Ptr<LineSegmentDetector> createLineSegmentDetector(
-        int _refine, double _scale, double _sigma_scale, double _quant, double _ang_th,
+        LineSegmentDetectorModes _refine, double _scale, double _sigma_scale, double _quant, double _ang_th,
         double _log_eps, double _density_th, int _n_bins)
 {
     return makePtr<LineSegmentDetectorImpl>(
@@ -402,7 +402,7 @@ CV_EXPORTS Ptr<LineSegmentDetector> createLineSegmentDetector(
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-LineSegmentDetectorImpl::LineSegmentDetectorImpl(int _refine, double _scale, double _sigma_scale, double _quant,
+LineSegmentDetectorImpl::LineSegmentDetectorImpl(LineSegmentDetectorModes _refine, double _scale, double _sigma_scale, double _quant,
         double _ang_th, double _log_eps, double _density_th, int _n_bins)
         : img_width(0), img_height(0), LOG_NT(0), w_needed(false), p_needed(false), n_needed(false),
           SCALE(_scale), doRefine(_refine), SIGMA_SCALE(_sigma_scale), QUANT(_quant),

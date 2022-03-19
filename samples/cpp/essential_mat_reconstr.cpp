@@ -2,7 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#include "opencv2/calib3d.hpp"
+#include "opencv2/3d.hpp"
+#include "opencv2/features2d.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 
@@ -250,7 +251,7 @@ int main(int args, char** argv) {
     const int pts_size = (int) pts1.size();
     const auto begin_time = std::chrono::steady_clock::now();
     // fine essential matrix
-    const Mat E = findEssentialMat(pts1, pts2, Mat(K), RANSAC, 0.99, 1.0, inliers);
+    const Mat E = findEssentialMat(pts1, pts2, Mat(K), RANSAC, 0.99, 1.0, 1000/*maxIters*/, inliers);
     std::cout << "RANSAC essential matrix time " << std::chrono::duration_cast<std::chrono::microseconds>
             (std::chrono::steady_clock::now() - begin_time).count() <<
             "mcs.\nNumber of inliers " << countNonZero(inliers) << "\n";

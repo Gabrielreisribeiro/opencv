@@ -2363,7 +2363,7 @@ class OpenCLSVMBufferPoolImpl;
 
 struct Context::Impl
 {
-    static Context::Impl* get(Context& context) { return context.p; }
+    static Context::Impl* get(Context& context) { return context.getImpl(); }
 
     typedef std::deque<Context::Impl*> container_t;
     static container_t& getGlobalContainer()
@@ -2996,7 +2996,7 @@ Device& Context::device(size_t idx) const
     return !p || idx >= p->devices.size() ? dummy : p->devices[idx];
 }
 
-Context& Context::getDefault(bool initialize)
+Context& Context::getDefault()
 {
     auto& c = OpenCLExecutionContext::getCurrent();
     if (!c.empty())
@@ -3005,7 +3005,6 @@ Context& Context::getDefault(bool initialize)
         return ctx;
     }
 
-    CV_UNUSED(initialize);
     static Context dummy;
     return dummy;
 }
@@ -3096,7 +3095,7 @@ namespace svm {
 
 const SVMCapabilities getSVMCapabilitites(const ocl::Context& context)
 {
-    Context::Impl* i = context.p;
+    Context::Impl* i = context.getImpl();
     CV_Assert(i);
     if (!i->svmInitialized)
         i->svmInit();
@@ -3105,7 +3104,7 @@ const SVMCapabilities getSVMCapabilitites(const ocl::Context& context)
 
 CV_EXPORTS const SVMFunctions* getSVMFunctions(const ocl::Context& context)
 {
-    Context::Impl* i = context.p;
+    Context::Impl* i = context.getImpl();
     CV_Assert(i);
     CV_Assert(i->svmInitialized); // getSVMCapabilitites() must be called first
     CV_Assert(i->svmFunctions.fn_clSVMAlloc != NULL);
@@ -3875,18 +3874,6 @@ bool Kernel::run_(int dims, size_t _globalsize[], size_t _localsize[],
 }
 
 
-static bool isRaiseErrorOnReuseAsyncKernel()
-{
-    static bool initialized = false;
-    static bool value = false;
-    if (!initialized)
-    {
-        value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_RAISE_ERROR_REUSE_ASYNC_KERNEL", false);
-        initialized = true;
-    }
-    return value;
-}
-
 bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
         bool sync, int64* timeNS, const Queue& q)
 {
@@ -3900,19 +3887,13 @@ bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
 
     if (isAsyncRun)
     {
-        CV_LOG_ERROR(NULL, "OpenCL kernel can't be reused in async mode: " << name);
-        if (isRaiseErrorOnReuseAsyncKernel())
-            CV_Assert(0);
-        return false;  // OpenCV 5.0: raise error
+        CV_Error_(Error::StsError, ("OpenCL kernel can't be reused in async mode: %s", name.c_str()));
     }
     isAsyncRun = !sync;
 
     if (isInProgress)
     {
-        CV_LOG_ERROR(NULL, "Previous OpenCL kernel launch is not finished: " << name);
-        if (isRaiseErrorOnReuseAsyncKernel())
-            CV_Assert(0);
-        return false;  // OpenCV 5.0: raise error
+        CV_Error_(Error::StsError, ("Previous OpenCL kernel launch is not finished: %s", name.c_str()));
     }
 
 #if CV_OPENCL_SYNC_RUN_KERNELS

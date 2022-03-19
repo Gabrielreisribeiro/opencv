@@ -170,9 +170,6 @@ public:
         STD_VECTOR        = 3 << KIND_SHIFT,
         STD_VECTOR_VECTOR = 4 << KIND_SHIFT,
         STD_VECTOR_MAT    = 5 << KIND_SHIFT,
-#if OPENCV_ABI_COMPATIBILITY < 500
-        EXPR              = 6 << KIND_SHIFT,  //!< removed: https://github.com/opencv/opencv/pull/17046
-#endif
         OPENGL_BUFFER     = 7 << KIND_SHIFT,
         CUDA_HOST_MEM     = 8 << KIND_SHIFT,
         CUDA_GPU_MAT      = 9 << KIND_SHIFT,
@@ -180,9 +177,6 @@ public:
         STD_VECTOR_UMAT   =11 << KIND_SHIFT,
         STD_BOOL_VECTOR   =12 << KIND_SHIFT,
         STD_VECTOR_CUDA_GPU_MAT = 13 << KIND_SHIFT,
-#if OPENCV_ABI_COMPATIBILITY < 500
-        STD_ARRAY         =14 << KIND_SHIFT,  //!< removed: https://github.com/opencv/opencv/issues/18897
-#endif
         STD_ARRAY_MAT     =15 << KIND_SHIFT
     };
 
@@ -370,6 +364,7 @@ public:
     void release() const;
     void clear() const;
     void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
+    void setZero() const;
 
     void assign(const UMat& u) const;
     void assign(const Mat& m) const;
@@ -1267,6 +1262,10 @@ public:
     elements need to be copied. The mask has to be of type CV_8U and can have 1 or multiple channels
      */
     Mat& setTo(InputArray value, InputArray mask=noArray());
+
+    /** @brief Sets all the array elements to 0.
+     */
+    Mat& setZero();
 
     /** @brief Changes the shape and/or the number of channels of a 2D matrix without copying the data.
 
@@ -2433,10 +2432,6 @@ public:
     UMat(const UMat& m, const Range* ranges);
     UMat(const UMat& m, const std::vector<Range>& ranges);
 
-    // FIXIT copyData=false is not implemented, drop this in favor of cv::Mat (OpenCV 5.0)
-    //! builds matrix from std::vector with or without copying the data
-    template<typename _Tp> explicit UMat(const std::vector<_Tp>& vec, bool copyData=false);
-
     //! destructor - calls release()
     ~UMat();
     //! assignment operators
@@ -2460,8 +2455,7 @@ public:
     //!  <0 - a diagonal from the lower half)
     UMat diag(int d=0) const;
     //! constructs a square diagonal matrix which main diagonal is vector "d"
-    CV_NODISCARD_STD static UMat diag(const UMat& d, UMatUsageFlags usageFlags /*= USAGE_DEFAULT*/);
-    CV_NODISCARD_STD static UMat diag(const UMat& d) { return diag(d, USAGE_DEFAULT); }  // OpenCV 5.0: remove abi compatibility overload
+    CV_NODISCARD_STD static UMat diag(const UMat& d, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! returns deep copy of the matrix, i.e. the data is copied
     CV_NODISCARD_STD UMat clone() const;
@@ -2495,22 +2489,14 @@ public:
     double dot(InputArray m) const;
 
     //! Matlab-style matrix initialization
-    CV_NODISCARD_STD static UMat zeros(int rows, int cols, int type, UMatUsageFlags usageFlags /*= USAGE_DEFAULT*/);
-    CV_NODISCARD_STD static UMat zeros(Size size, int type, UMatUsageFlags usageFlags /*= USAGE_DEFAULT*/);
-    CV_NODISCARD_STD static UMat zeros(int ndims, const int* sz, int type, UMatUsageFlags usageFlags /*= USAGE_DEFAULT*/);
-    CV_NODISCARD_STD static UMat zeros(int rows, int cols, int type) { return zeros(rows, cols, type, USAGE_DEFAULT); }  // OpenCV 5.0: remove abi compatibility overload
-    CV_NODISCARD_STD static UMat zeros(Size size, int type) { return zeros(size, type, USAGE_DEFAULT); }  // OpenCV 5.0: remove abi compatibility overload
-    CV_NODISCARD_STD static UMat zeros(int ndims, const int* sz, int type) { return zeros(ndims, sz, type, USAGE_DEFAULT); }  // OpenCV 5.0: remove abi compatibility overload
-    CV_NODISCARD_STD static UMat ones(int rows, int cols, int type, UMatUsageFlags usageFlags /*= USAGE_DEFAULT*/);
-    CV_NODISCARD_STD static UMat ones(Size size, int type, UMatUsageFlags usageFlags /*= USAGE_DEFAULT*/);
-    CV_NODISCARD_STD static UMat ones(int ndims, const int* sz, int type, UMatUsageFlags usageFlags /*= USAGE_DEFAULT*/);
-    CV_NODISCARD_STD static UMat ones(int rows, int cols, int type) { return ones(rows, cols, type, USAGE_DEFAULT); }  // OpenCV 5.0: remove abi compatibility overload
-    CV_NODISCARD_STD static UMat ones(Size size, int type) { return ones(size, type, USAGE_DEFAULT); }  // OpenCV 5.0: remove abi compatibility overload
-    CV_NODISCARD_STD static UMat ones(int ndims, const int* sz, int type) { return ones(ndims, sz, type, USAGE_DEFAULT); }  // OpenCV 5.0: remove abi compatibility overload
-    CV_NODISCARD_STD static UMat eye(int rows, int cols, int type, UMatUsageFlags usageFlags /*= USAGE_DEFAULT*/);
-    CV_NODISCARD_STD static UMat eye(Size size, int type, UMatUsageFlags usageFlags /*= USAGE_DEFAULT*/);
-    CV_NODISCARD_STD static UMat eye(int rows, int cols, int type) { return eye(rows, cols, type, USAGE_DEFAULT); }  // OpenCV 5.0: remove abi compatibility overload
-    CV_NODISCARD_STD static UMat eye(Size size, int type) { return eye(size, type, USAGE_DEFAULT); }  // OpenCV 5.0: remove abi compatibility overload
+    CV_NODISCARD_STD static UMat zeros(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    CV_NODISCARD_STD static UMat zeros(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    CV_NODISCARD_STD static UMat zeros(int ndims, const int* sz, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    CV_NODISCARD_STD static UMat ones(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    CV_NODISCARD_STD static UMat ones(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    CV_NODISCARD_STD static UMat ones(int ndims, const int* sz, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    CV_NODISCARD_STD static UMat eye(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    CV_NODISCARD_STD static UMat eye(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! allocates new matrix data unless the matrix already has specified size and type.
     // previous data is unreferenced if needed.

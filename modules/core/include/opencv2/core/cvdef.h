@@ -395,11 +395,12 @@ typedef union Cv64suf
 Cv64suf;
 
 #ifndef OPENCV_ABI_COMPATIBILITY
-#define OPENCV_ABI_COMPATIBILITY 400
+#define OPENCV_ABI_COMPATIBILITY 500
 #endif
 
 #ifdef __OPENCV_BUILD
-#  define DISABLE_OPENCV_3_COMPATIBILITY
+#  define DISABLE_OPENCV_3_COMPATIBILITY  // OpenCV 5.0: remove that
+#  define DISABLE_OPENCV_4_COMPATIBILITY
 #  define OPENCV_DISABLE_DEPRECATED_COMPATIBILITY
 #endif
 
@@ -453,6 +454,7 @@ Cv64suf;
 #define CV_EXPORTS_W_SIMPLE CV_EXPORTS
 #define CV_EXPORTS_AS(synonym) CV_EXPORTS
 #define CV_EXPORTS_W_MAP CV_EXPORTS
+#define CV_EXPORTS_W_PARAMS CV_EXPORTS
 #define CV_IN_OUT
 #define CV_OUT
 #define CV_PROP
@@ -957,6 +959,14 @@ protected:
 
 }
 #endif
+
+/** @brief Constructs the 'fourcc' code, used in video codecs and many other places.
+    Simply call it with 4 chars like `CV_FOURCC('I', 'Y', 'U', 'V')`
+*/
+CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
+{
+    return (c1 & 255) + ((c2 & 255) << 8) + ((c3 & 255) << 16) + ((c4 & 255) << 24);
+}
 
 //! @}
 

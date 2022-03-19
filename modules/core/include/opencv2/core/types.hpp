@@ -892,6 +892,7 @@ public:
     @param epsilon The desired accuracy or change in parameters at which the iterative algorithm stops.
     */
     TermCriteria(int type, int maxCount, double epsilon);
+    TermCriteria(int maxCount, double epsilon);
 
     inline bool isValid() const
     {
@@ -2431,6 +2432,26 @@ TermCriteria::TermCriteria()
 inline
 TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
     : type(_type), maxCount(_maxCount), epsilon(_epsilon) {}
+
+inline TermCriteria::TermCriteria(int _maxCount, double _epsilon)
+{
+    type = 0;
+    if (_maxCount > 0)
+    {
+        maxCount = _maxCount;
+        type = COUNT;
+    }
+    else
+        maxCount = INT_MAX-1;
+
+    if (_epsilon > 0)
+    {
+        epsilon = _epsilon;
+        type |= EPS;
+    }
+    else
+        epsilon = DBL_EPSILON;
+}
 
 //! @endcond
 

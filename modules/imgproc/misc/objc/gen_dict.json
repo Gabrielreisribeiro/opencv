@@ -1,4 +1,7 @@
 {
+    "class_ignore_list": [
+        "FontFace"
+    ],
     "AdditionalImports" : {
         "Imgproc" : [ "\"imgproc/bindings.hpp\"" ]
     },
@@ -127,6 +130,13 @@
         },
         "Subdiv2D" : {
             "(void)insert:(NSArray<Point2f*>*)ptvec" : { "insert" : {"name" : "insertVector"} }
+        }
+    },
+    "type_dict": {
+        "FontFace": {
+            "objc_type": "FontFace*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[FontFace fromNative:%(n)s]"
         }
     }
 }

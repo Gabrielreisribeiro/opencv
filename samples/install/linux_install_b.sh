@@ -27,7 +27,7 @@ sudo apt install -y git
 
 # [download]
 git clone https://github.com/opencv/opencv.git
-git -C opencv checkout 4.x
+git -C opencv checkout 5.x
 # [download]
 
 # [prepare]

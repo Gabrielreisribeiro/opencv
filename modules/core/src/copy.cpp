@@ -661,6 +661,25 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
 }
 
 
+Mat& Mat::setZero()
+{
+    CV_INSTRUMENT_REGION();
+
+    if( empty() )
+        return *this;
+
+    size_t esz = elemSize();
+
+    const Mat* arrays[] = { this, 0 };
+    uchar* ptrs[]={0};
+    NAryMatIterator it(arrays, ptrs);
+
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+        memset(ptrs[0], 0, esz*it.size);
+    return *this;
+}
+
+
 #if defined HAVE_OPENCL && !defined __APPLE__
 
 static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
@@ -1188,15 +1207,6 @@ cvFlip( const CvArr* srcarr, CvArr* dstarr, int flip_mode )
 
     CV_Assert( src.type() == dst.type() && src.size() == dst.size() );
     cv::flip( src, dst, flip_mode );
-}
-
-CV_IMPL void
-cvRepeat( const CvArr* srcarr, CvArr* dstarr )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src.type() == dst.type() &&
-        dst.rows % src.rows == 0 && dst.cols % src.cols == 0 );
-    cv::repeat(src, dst.rows/src.rows, dst.cols/src.cols, dst);
 }
 
 #endif  // OPENCV_EXCLUDE_C_API
